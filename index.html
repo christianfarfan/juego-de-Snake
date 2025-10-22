@@ -3,445 +3,212 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Culebrita — Snake (Retro)</title>
+<title>Culebrita Retro — Adaptable</title>
 <style>
   :root{
     --bg:#0b0f13;
-    --panel:#0f1720;
-    --grid:#0a0d11;
     --accent:#00ff88;
     --accent2:#ffdd55;
-    --danger:#ff4d6d;
-    --glass: rgba(255,255,255,0.03);
   }
-  html,body{height:100%;margin:0;font-family: "Courier New", Courier, monospace;background:linear-gradient(180deg,#020408 0%, #07111a 100%);color:#c8f9e0}
+  html,body{
+    height:100%;
+    margin:0;
+    background:linear-gradient(180deg,#020408 0%, #07111a 100%);
+    font-family:"Courier New",monospace;
+    color:#dfffe9;
+  }
   .wrap{
-    min-height:100%;
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:28px;
-    padding:28px;
+    height:100%;
+    padding:12px;
     box-sizing:border-box;
-  }
-
-  .panel{
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border: 2px solid rgba(0,255,136,0.06);
-    padding:18px;
-    border-radius:12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    display:flex;
-    gap:18px;
-    align-items:flex-start;
-  }
-
-  canvas{
-    background: repeating-linear-gradient(0deg, transparent 0 30px, rgba(255,255,255,0.01) 30px, rgba(255,255,255,0.01) 31px);
-    image-rendering: pixelated;
-    border-radius:8px;
-    display:block;
-  }
-
-  .hud{
-    width:220px;
-    padding:14px;
-    border-radius:8px;
-    background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(255,255,255,0.02));
-    border:1px solid rgba(255,255,255,0.02);
-  }
-
-  .title{
-    font-size:20px;
-    letter-spacing:1px;
-    margin:0 0 12px 0;
-    color:var(--accent);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-  }
-  .score {
-    font-size:26px;
-    font-weight:700;
-    color:var(--accent2);
     text-align:center;
-    margin:6px 0 12px 0;
   }
-
-  .controls{
-    font-size:13px;
-    color:#cfeee0;
-    line-height:1.5;
-    margin-bottom:12px;
-  }
-
-  .btn{
-    display:inline-block;
-    padding:8px 12px;
+  canvas{
+    display:block;
+    background:#081016;
+    image-rendering:pixelated;
     border-radius:8px;
-    background:var(--glass);
-    border:1px solid rgba(255,255,255,0.03);
-    cursor:pointer;
+    margin-bottom:10px;
+    box-shadow:0 0 20px rgba(0,255,136,0.2);
+    touch-action:none;
+  }
+  .score{font-size:20px;font-weight:bold;color:var(--accent2);margin-bottom:6px;}
+  .status{font-size:14px;color:#aef3c8;margin-bottom:10px;}
+  .btn{
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:8px;
     color:#dfffe9;
-    font-weight:700;
+    font-weight:bold;
     text-transform:uppercase;
-    font-size:12px;
-  }
-
-  .footer{
-    margin-top:12px;
-    font-size:12px;
-    color:#9fe9c6;
-    opacity:0.9;
-  }
-
-  .info-row{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    justify-content:space-between;
-  }
-
-  .status{
-    padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.03);font-size:13px;color:#aef3c8;
-  }
-
-  /* Retro pixel look for small screens */
-  @media (max-width:700px){
-    .wrap{padding:12px}
-    .panel{flex-direction:column;align-items:center}
-    .hud{width:100%}
+    padding:8px 14px;
+    cursor:pointer;
   }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="panel">
-    <canvas id="game" width="600" height="600" tabindex="0"></canvas>
-
-    <div class="hud">
-      <div class="title">
-        <div>🟢 Culebrita</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.35)">Retro</div>
-      </div>
-
-      <div class="score" id="score">Score: 0</div>
-
-      <div class="info-row">
-        <div class="status" id="status">Listo</div>
-        <button class="btn" id="startBtn">Iniciar</button>
-      </div>
-
-      <div class="controls" style="margin-top:12px;">
-        <strong>Controles:</strong><br/>
-        Flechas del teclado / W A S D — Espacio para reiniciar<br/>
-        La serpiente empieza siempre centrada y puntuación se reinicia.
-      </div>
-
-      <div class="footer">
-        Diseño retro • Sonidos por WebAudio • Sin librerías
-      </div>
-    </div>
+  <div class="score" id="score">Score: 0</div>
+  <canvas id="game" width="400" height="400" tabindex="0"></canvas>
+  <div class="status" id="status">Listo</div>
+  <button class="btn" id="startBtn">Iniciar</button>
+  <div style="margin-top:8px;font-size:12px;opacity:0.7;">
+    Usa flechas o WASD — Espacio para reiniciar
   </div>
 </div>
 
 <script>
-/*
- Snake - simple implementation
- - Grid-based canvas
- - Arrow keys / WASD
- - Growth on eating (score +1)
- - Collision with walls or itself -> game over
- - Sounds: eat + game over via WebAudio
- - Start/restart centered with reset score
-*/
-
-// Configuración
+/* === CONFIGURACIÓN GENERAL === */
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d', { alpha: false });
+const ctx = canvas.getContext('2d',{alpha:false});
 const scoreEl = document.getElementById('score');
 const statusEl = document.getElementById('status');
 const startBtn = document.getElementById('startBtn');
 
-const GRID = 20; // número de celdas por eje (20x20)
-const CELL = canvas.width / GRID; // tamaño de celda
-const FPS = 10; // velocidad (frames por segundo)
+let GRID = 20;
+let CELL = 0;
+let FPS = 10;
 let tickInterval = null;
-
-// Estado del juego
 let snake = [];
-let dir = { x: 1, y: 0 }; // vector dirección
-let nextDir = { x: 1, y: 0 }; // para evitar reversos instantáneos
+let dir = {x:1,y:0};
+let nextDir = {x:1,y:0};
 let food = null;
 let score = 0;
 let running = false;
 let pendingGrow = 0;
 
-// Audio (WebAudio)
+/* === AUDIO === */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function playEatSound(){
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = 'square';
-  o.frequency.setValueAtTime(880, audioCtx.currentTime);
-  o.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 0.08);
-  g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.18);
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start();
-  o.stop(audioCtx.currentTime + 0.19);
+function playEat(){
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='square';o.frequency.setValueAtTime(880,audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(1400,audioCtx.currentTime+0.08);
+  g.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.2,audioCtx.currentTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.18);
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.19);
+}
+function playLose(){
+  const n=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sawtooth';o.frequency.setValueAtTime(400,n);
+  o.frequency.exponentialRampToValueAtTime(60,n+0.6);
+  g.gain.setValueAtTime(0.0001,n);g.gain.exponentialRampToValueAtTime(0.3,n+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,n+0.7);
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(n+0.8);
 }
 
-function playGameOverSound(){
-  const now = audioCtx.currentTime;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = 'sawtooth';
-  o.frequency.setValueAtTime(400, now);
-  o.frequency.exponentialRampToValueAtTime(60, now + 0.6);
-  g.gain.setValueAtTime(0.0001, now);
-  g.gain.exponentialRampToValueAtTime(0.3, now + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start();
-  o.stop(now + 0.8);
+/* === FUNCIONES BASE === */
+function resizeCanvas(){
+  const size = Math.min(window.innerWidth*0.8, window.innerHeight*0.7);
+  canvas.width = canvas.height = Math.floor(size);
+  CELL = canvas.width / GRID;
+  draw();
 }
 
-// Utilidades
-function rndInt(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+function rndInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
 
 function placeFood(){
-  // coloca comida en celda que no colida con serpiente
-  const occupied = new Set(snake.map(s => s.x + ',' + s.y));
-  let tries=0;
+  const occupied = new Set(snake.map(s=>s.x+','+s.y));
   while(true){
-    const x = rndInt(0, GRID-1);
-    const y = rndInt(0, GRID-1);
-    if(!occupied.has(x+','+y)) { food = {x,y}; break; }
-    if(++tries>1000) { food = null; break; }
+    const x=rndInt(0,GRID-1),y=rndInt(0,GRID-1);
+    if(!occupied.has(x+','+y)){food={x,y};break;}
   }
 }
 
-// Inicializar (centrar serpiente)
 function resetGame(){
-  // Snake centrada, tamaño base 3
-  const cx = Math.floor(GRID/2);
-  const cy = Math.floor(GRID/2);
-  snake = [
-    {x: cx-1, y: cy},
-    {x: cx,   y: cy},
-    {x: cx+1, y: cy}
-  ];
-  dir = { x: 1, y: 0 };
-  nextDir = { x: 1, y: 0 };
-  pendingGrow = 0;
-  score = 0;
-  running = false;
-  updateHUD();
-  placeFood();
-  draw(); // render inicial
+  const cx=Math.floor(GRID/2),cy=Math.floor(GRID/2);
+  snake=[{x:cx-1,y:cy},{x:cx,y:cy},{x:cx+1,y:cy}];
+  dir={x:1,y:0};nextDir={x:1,y:0};
+  score=0;pendingGrow=0;running=false;
+  placeFood();updateHUD();draw();
 }
 
-// Actualizar HUD
-function updateHUD(stateMsg){
-  scoreEl.textContent = "Score: " + score;
-  statusEl.textContent = stateMsg || (running ? "Jugando" : "Listo");
+function updateHUD(msg){
+  scoreEl.textContent="Score: "+score;
+  statusEl.textContent=msg|| (running?"Jugando":"Listo");
 }
 
-// Lógica por tick
+/* === LÓGICA PRINCIPAL === */
 function tick(){
   if(!running) return;
-  // actualizar dirección (previene reverso)
-  if((nextDir.x !== -dir.x) || (nextDir.y !== -dir.y)){
-    dir = nextDir;
-  }
+  if((nextDir.x!==-dir.x)||(nextDir.y!==-dir.y)) dir=nextDir;
 
-  // Calcula nueva cabeza
-  const head = {...snake[snake.length-1]};
-  head.x += dir.x;
-  head.y += dir.y;
+  const head={...snake[snake.length-1]};
+  head.x+=dir.x;head.y+=dir.y;
 
-  // Colisión con paredes
-  if(head.x < 0 || head.x >= GRID || head.y < 0 || head.y >= GRID){
-    gameOver();
-    return;
-  }
+  if(head.x<0||head.x>=GRID||head.y<0||head.y>=GRID){gameOver();return;}
+  for(let s of snake){if(s.x===head.x&&s.y===head.y){gameOver();return;}}
 
-  // Colisión con sí misma
-  for(let seg of snake){
-    if(seg.x === head.x && seg.y === head.y){
-      gameOver();
-      return;
-    }
-  }
-
-  // Inserta nueva cabeza
   snake.push(head);
 
-  // Comer?
-  if(food && head.x === food.x && head.y === food.y){
-    pendingGrow += 1; // crece 1
-    score += 1;
-    playEatSound();
-    placeFood();
+  if(food&&head.x===food.x&&head.y===food.y){
+    pendingGrow++;score++;playEat();placeFood();
   }
-
-  // Si no hay crecimiento pendiente, eliminar cola
-  if(pendingGrow > 0){
-    pendingGrow--;
-    // no eliminar cola (crece)
-  } else {
-    snake.shift();
-  }
-
-  updateHUD();
-  draw();
+  if(pendingGrow>0) pendingGrow--; else snake.shift();
+  updateHUD();draw();
 }
 
-// Dibujado
 function draw(){
-  // Fondo retro
-  ctx.fillStyle = '#081016';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  // Grid subtle (pixel look)
-  // draw food
-  if(food){
-    drawCell(food.x, food.y, true);
-  }
-
-  // draw snake body
+  ctx.fillStyle="#081016";ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(food) drawCell(food.x,food.y,true);
   for(let i=0;i<snake.length;i++){
-    const s = snake[i];
-    const head = (i === snake.length-1);
-    drawCell(s.x, s.y, false, head);
+    const s=snake[i],head=(i===snake.length-1);
+    drawCell(s.x,s.y,false,head);
   }
 }
 
-function drawCell(gx, gy, isFood=false, isHead=false){
-  const x = gx * CELL;
-  const y = gy * CELL;
-
+function drawCell(gx,gy,isFood=false,isHead=false){
+  const x=gx*CELL,y=gy*CELL;
   if(isFood){
-    // Glow like square with inner pixel
-    ctx.fillStyle = '#ffeb9a';
-    roundRect(ctx, x+2, y+2, CELL-4, CELL-4, 4);
-    ctx.fill();
-    // small center
-    ctx.fillStyle = '#ffb84d';
-    ctx.fillRect(x + CELL*0.33, y + CELL*0.33, CELL*0.33, CELL*0.33);
+    ctx.fillStyle="#ffeb9a";
+    ctx.fillRect(x+CELL*0.25,y+CELL*0.25,CELL*0.5,CELL*0.5);
     return;
   }
-
-  if(isHead){
-    // head brighter
-    ctx.fillStyle = '#00ff88';
-    roundRect(ctx, x+1, y+1, CELL-2, CELL-2, 4);
-    ctx.fill();
-
-    // eye
-    ctx.fillStyle = '#01321f';
-    const eyeSize = Math.max(2, Math.floor(CELL*0.12));
-    ctx.fillRect(x + Math.floor(CELL*0.6), y + Math.floor(CELL*0.28), eyeSize, eyeSize);
-    return;
-  }
-
-  // body segment
-  ctx.fillStyle = '#0fffc1';
-  roundRect(ctx, x+2, y+2, CELL-4, CELL-4, 3);
-  ctx.fill();
+  ctx.fillStyle=isHead?"#00ff88":"#0fffc1";
+  ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
 }
 
-// Rounded rect helper
-function roundRect(ctx, x, y, w, h, r){
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-// Game over
+/* === EVENTOS === */
 function gameOver(){
-  running = false;
-  updateHUD("Game Over");
-  playGameOverSound();
-  // flash canvas border
-  canvas.style.boxShadow = "0 0 40px rgba(255,77,109,0.5)";
-  setTimeout(()=> canvas.style.boxShadow = "", 600);
-  draw();
+  running=false;updateHUD("Game Over");playLose();
+  canvas.style.boxShadow="0 0 30px rgba(255,77,109,0.6)";
+  setTimeout(()=>canvas.style.boxShadow="0 0 20px rgba(0,255,136,0.2)",600);
 }
 
-// Input handling
-const keyMap = {
-  'ArrowUp':    {x:0,y:-1},
-  'ArrowDown':  {x:0,y:1},
-  'ArrowLeft':  {x:-1,y:0},
-  'ArrowRight': {x:1,y:0},
-  'w': {x:0,y:-1},
-  's': {x:0,y:1},
-  'a': {x:-1,y:0},
-  'd': {x:1,y:0}
+const keyMap={
+  'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},
+  'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0},
+  'w':{x:0,y:-1},'s':{x:0,y:1},'a':{x:-1,y:0},'d':{x:1,y:0}
 };
-
-window.addEventListener('keydown', (e)=>{
-  const k = e.key;
-  if(k === ' '){
-    // espacio = reiniciar/iniciar
-    e.preventDefault();
-    startGame();
-    return;
-  }
-  const mapped = keyMap[k];
-  if(mapped){
-    e.preventDefault();
-    // no permitir reverso directo
-    if(mapped.x === -dir.x && mapped.y === -dir.y) return;
-    nextDir = mapped;
-  }
+window.addEventListener('keydown',e=>{
+  const k=e.key;if(k===' '){e.preventDefault();startGame();return;}
+  const m=keyMap[k];if(!m)return;
+  e.preventDefault();
+  if(m.x===-dir.x&&m.y===-dir.y)return;
+  nextDir=m;
 });
 
-// Start / Restart
 function startGame(){
-  // resume AudioContext on user gesture if suspended
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-  if(!running){
-    // reset snake and score to initial values when starting a new game
-    resetGame();
-    running = true;
-    updateHUD("Jugando");
-    // start tick loop
-    if(tickInterval) clearInterval(tickInterval);
-    tickInterval = setInterval(tick, 1000 / FPS);
-  } else {
-    // Already running -> do nothing
-  }
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  resetGame();
+  running=true;updateHUD("Jugando");
+  if(tickInterval) clearInterval(tickInterval);
+  tickInterval=setInterval(tick,1000/FPS);
+  canvas.focus();
 }
 
-// start/restart button
-startBtn.addEventListener('click', ()=>{
-  startGame();
-  canvas.focus();
-});
+startBtn.addEventListener('click',startGame);
+window.addEventListener('resize',resizeCanvas);
 
-// focus canvas to get keys reliably
-canvas.addEventListener('click', ()=> canvas.focus());
-
-// init
+/* === INICIO === */
+resizeCanvas();
 resetGame();
-draw();
-
-// allow initial focus for keyboard
 canvas.focus();
-
-// For safety: stop interval on page unload
-window.addEventListener('beforeunload', ()=> {
-  if(tickInterval) clearInterval(tickInterval);
-});
 </script>
 </body>
 </html>
+
