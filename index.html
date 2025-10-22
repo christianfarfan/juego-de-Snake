@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Culebrita Retro — Adaptable</title>
+<title>Culebrita Espacial 🐍🍎</title>
 <style>
   :root{
-    --bg:#0b0f13;
     --accent:#00ff88;
     --accent2:#ffdd55;
   }
   html,body{
     height:100%;
     margin:0;
-    background:linear-gradient(180deg,#020408 0%, #07111a 100%);
     font-family:"Courier New",monospace;
+    background:#000;
     color:#dfffe9;
+    overflow:hidden;
   }
   .wrap{
     display:flex;
@@ -24,16 +24,16 @@
     justify-content:center;
     height:100%;
     padding:12px;
-    box-sizing:border-box;
     text-align:center;
+    box-sizing:border-box;
   }
   canvas{
     display:block;
-    background:#081016;
+    background:#020617;
     image-rendering:pixelated;
     border-radius:8px;
     margin-bottom:10px;
-    box-shadow:0 0 20px rgba(0,255,136,0.2);
+    box-shadow:0 0 25px rgba(0,255,136,0.25);
     touch-action:none;
   }
   .score{font-size:20px;font-weight:bold;color:var(--accent2);margin-bottom:6px;}
@@ -62,7 +62,7 @@
 </div>
 
 <script>
-/* === CONFIGURACIÓN GENERAL === */
+/* === CONFIGURACIÓN === */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d',{alpha:false});
 const scoreEl = document.getElementById('score');
@@ -101,16 +101,63 @@ function playLose(){
   o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(n+0.8);
 }
 
+/* === ICONOS SVG === */
+// Cabeza de serpiente
+const snakeHeadImg = new Image();
+snakeHeadImg.src = 'data:image/svg+xml;base64,'+btoa(`
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<circle cx="32" cy="32" r="30" fill="#00ff88" stroke="#004433" stroke-width="4"/>
+<circle cx="22" cy="24" r="4" fill="#000"/>
+<circle cx="42" cy="24" r="4" fill="#000"/>
+<path d="M32 38 q10 8 0 16 q-10-8 0-16z" fill="#ff5566"/>
+</svg>
+`);
+
+// Ícono de manzana (comida)
+const appleImg = new Image();
+appleImg.src = 'data:image/svg+xml;base64,'+btoa(`
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+<circle cx="32" cy="36" r="20" fill="#ff1e1e" stroke="#660000" stroke-width="4"/>
+<rect x="29" y="8" width="6" height="10" rx="3" fill="#3a7728"/>
+<path d="M32 12 C36 6,44 8,46 14" fill="none" stroke="#3a7728" stroke-width="3" stroke-linecap="round"/>
+</svg>
+`);
+
+/* === IMÁGENES DE NAVE ESPACIAL === */
+const shipImages = [];
+const shipSources = [
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjMDBmZiIgZD0iTTYgMCA3IDMgOCA1IDcgNiA2IDcgNSA2IDQgNSA0IDUgNSA0IDUgMyA3IDMgNiAwWiIvPjwvc3ZnPg==',
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI2IiBjeT0iNiIgcj0iMiIgZmlsbD0iI2ZmNTAwMCIvPjwvc3ZnPg=='
+];
+for(let src of shipSources){
+  const img = new Image();
+  img.src = src;
+  shipImages.push(img);
+}
+const ships = [];
+function generateShips(){
+  ships.length=0;
+  const count=8;
+  for(let i=0;i<count;i++){
+    ships.push({
+      x: Math.random(),
+      y: Math.random(),
+      img: shipImages[i%shipImages.length],
+      size: 20+Math.random()*30,
+      speed: 0.0003+Math.random()*0.0007
+    });
+  }
+}
+
 /* === FUNCIONES BASE === */
 function resizeCanvas(){
-  const size = Math.min(window.innerWidth*0.8, window.innerHeight*0.7);
+  const size = Math.min(window.innerWidth*0.85, window.innerHeight*0.75);
   canvas.width = canvas.height = Math.floor(size);
   CELL = canvas.width / GRID;
   draw();
 }
 
 function rndInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
-
 function placeFood(){
   const occupied = new Set(snake.map(s=>s.x+','+s.y));
   while(true){
@@ -118,7 +165,6 @@ function placeFood(){
     if(!occupied.has(x+','+y)){food={x,y};break;}
   }
 }
-
 function resetGame(){
   const cx=Math.floor(GRID/2),cy=Math.floor(GRID/2);
   snake=[{x:cx-1,y:cy},{x:cx,y:cy},{x:cx+1,y:cy}];
@@ -126,59 +172,83 @@ function resetGame(){
   score=0;pendingGrow=0;running=false;
   placeFood();updateHUD();draw();
 }
-
 function updateHUD(msg){
   scoreEl.textContent="Score: "+score;
   statusEl.textContent=msg|| (running?"Jugando":"Listo");
 }
 
-/* === LÓGICA PRINCIPAL === */
+/* === LÓGICA === */
 function tick(){
   if(!running) return;
   if((nextDir.x!==-dir.x)||(nextDir.y!==-dir.y)) dir=nextDir;
-
   const head={...snake[snake.length-1]};
   head.x+=dir.x;head.y+=dir.y;
-
   if(head.x<0||head.x>=GRID||head.y<0||head.y>=GRID){gameOver();return;}
   for(let s of snake){if(s.x===head.x&&s.y===head.y){gameOver();return;}}
-
   snake.push(head);
-
-  if(food&&head.x===food.x&&head.y===food.y){
-    pendingGrow++;score++;playEat();placeFood();
-  }
+  if(food&&head.x===food.x&&head.y===food.y){pendingGrow++;score++;playEat();placeFood();}
   if(pendingGrow>0) pendingGrow--; else snake.shift();
   updateHUD();draw();
 }
 
+/* === DIBUJO === */
 function draw(){
-  ctx.fillStyle="#081016";ctx.fillRect(0,0,canvas.width,canvas.height);
-  if(food) drawCell(food.x,food.y,true);
-  for(let i=0;i<snake.length;i++){
-    const s=snake[i],head=(i===snake.length-1);
-    drawCell(s.x,s.y,false,head);
+  // Fondo con cuadrícula
+  ctx.fillStyle="#020617";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle="rgba(255,255,255,0.05)";
+  ctx.lineWidth=1;
+  for(let i=0;i<=GRID;i++){
+    const pos=i*CELL;
+    ctx.beginPath();
+    ctx.moveTo(pos,0);ctx.lineTo(pos,canvas.height);ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0,pos);ctx.lineTo(canvas.width,pos);ctx.stroke();
   }
-}
 
-function drawCell(gx,gy,isFood=false,isHead=false){
-  const x=gx*CELL,y=gy*CELL;
-  if(isFood){
-    ctx.fillStyle="#ffeb9a";
-    ctx.fillRect(x+CELL*0.25,y+CELL*0.25,CELL*0.5,CELL*0.5);
-    return;
+  // Naves espaciales
+  const now=performance.now();
+  for(let s of ships){
+    const x=s.x*canvas.width;
+    const y=((s.y + (now*s.speed))%1)*canvas.height;
+    ctx.globalAlpha=0.3;
+    ctx.drawImage(s.img,x,y,s.size,s.size);
+    ctx.globalAlpha=1;
   }
-  ctx.fillStyle=isHead?"#00ff88":"#0fffc1";
-  ctx.fillRect(x+1,y+1,CELL-2,CELL-2);
+
+  // Comida (manzana)
+  if(food){
+    const size = CELL*0.9;
+    ctx.drawImage(appleImg, food.x*CELL+(CELL-size)/2, food.y*CELL+(CELL-size)/2, size, size);
+  }
+
+  // Cuerpo
+  const grad = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  grad.addColorStop(0,"#00ff88");
+  grad.addColorStop(1,"#004433");
+  ctx.fillStyle = grad;
+  for(let i=0;i<snake.length-1;i++){
+    const seg=snake[i];
+    ctx.fillRect(seg.x*CELL+1,seg.y*CELL+1,CELL-2,CELL-2);
+  }
+
+  // Cabeza
+  const head = snake[snake.length-1];
+  const angle = Math.atan2(dir.y,dir.x);
+  ctx.save();
+  ctx.translate(head.x*CELL+CELL/2, head.y*CELL+CELL/2);
+  ctx.rotate(angle);
+  const size = CELL*0.9;
+  ctx.drawImage(snakeHeadImg, -size/2, -size/2, size, size);
+  ctx.restore();
 }
 
 /* === EVENTOS === */
 function gameOver(){
   running=false;updateHUD("Game Over");playLose();
   canvas.style.boxShadow="0 0 30px rgba(255,77,109,0.6)";
-  setTimeout(()=>canvas.style.boxShadow="0 0 20px rgba(0,255,136,0.2)",600);
+  setTimeout(()=>canvas.style.boxShadow="0 0 25px rgba(0,255,136,0.25)",600);
 }
-
 const keyMap={
   'ArrowUp':{x:0,y:-1},'ArrowDown':{x:0,y:1},
   'ArrowLeft':{x:-1,y:0},'ArrowRight':{x:1,y:0},
@@ -191,24 +261,21 @@ window.addEventListener('keydown',e=>{
   if(m.x===-dir.x&&m.y===-dir.y)return;
   nextDir=m;
 });
-
 function startGame(){
   if(audioCtx.state==='suspended') audioCtx.resume();
-  resetGame();
-  running=true;updateHUD("Jugando");
+  resetGame();running=true;updateHUD("Jugando");
   if(tickInterval) clearInterval(tickInterval);
   tickInterval=setInterval(tick,1000/FPS);
   canvas.focus();
 }
-
 startBtn.addEventListener('click',startGame);
 window.addEventListener('resize',resizeCanvas);
 
 /* === INICIO === */
+generateShips();
 resizeCanvas();
 resetGame();
 canvas.focus();
 </script>
 </body>
 </html>
-
